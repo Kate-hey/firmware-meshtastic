@@ -1340,7 +1340,6 @@ void TFTDisplay::sendCommand(uint8_t com)
     // handle display on/off directly
     switch (com) {
     case DISPLAYON: {
-        // LOG_DEBUG("Display on");
         backlightEnable->set(true);
 #if ARCH_PORTDUINO
         display(true);
@@ -1367,7 +1366,6 @@ void TFTDisplay::sendCommand(uint8_t com)
         break;
     }
     case DISPLAYOFF: {
-        // LOG_DEBUG("Display off");
         backlightEnable->set(false);
 #if ARCH_PORTDUINO
         tft->clear();

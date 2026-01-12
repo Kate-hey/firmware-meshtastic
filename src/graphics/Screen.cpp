@@ -1820,13 +1820,16 @@ bool shouldWakeOnReceivedMessage()
 {
     /*
     The goal here is to determine when we do NOT wake up the screen on message received:
-    - Any ext. notifications are turned on
+    - Any ext. notifications are turned on (except for T-Lora Pager which should always wake)
     - If role is not CLIENT / CLIENT_MUTE / CLIENT_HIDDEN / CLIENT_BASE
     - If the battery level is very low
     */
+#if !defined(T_LORA_PAGER)
+    // T-Lora Pager should always wake screen on message - it's a pager!
     if (moduleConfig.external_notification.enabled) {
         return false;
     }
+#endif
     if (!IS_ONE_OF(config.device.role, meshtastic_Config_DeviceConfig_Role_CLIENT,
                    meshtastic_Config_DeviceConfig_Role_CLIENT_MUTE, meshtastic_Config_DeviceConfig_Role_CLIENT_HIDDEN,
                    meshtastic_Config_DeviceConfig_Role_CLIENT_BASE)) {

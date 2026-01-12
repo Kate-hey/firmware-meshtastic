@@ -393,6 +393,12 @@ void setup()
     io.digitalWrite(EXPANDS_GPS_EN, HIGH);
     io.pinMode(EXPANDS_KB_EN, OUTPUT);
     io.digitalWrite(EXPANDS_KB_EN, HIGH);
+    // Reset the TCA8418 keyboard controller
+    io.pinMode(EXPANDS_KB_RST, OUTPUT);
+    io.digitalWrite(EXPANDS_KB_RST, LOW);   // Assert reset
+    delay(10);                               // Hold reset for 10ms
+    io.digitalWrite(EXPANDS_KB_RST, HIGH);  // Release reset
+    delay(50);                               // Wait for TCA8418 to initialize
     io.pinMode(EXPANDS_SD_EN, OUTPUT);
     io.digitalWrite(EXPANDS_SD_EN, HIGH);
     io.pinMode(EXPANDS_GPIO_EN, OUTPUT);

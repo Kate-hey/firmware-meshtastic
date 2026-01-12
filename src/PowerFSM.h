@@ -54,4 +54,7 @@ extern Fsm powerFSM;
 extern State stateON, statePOWER, stateSERIAL, stateDARK;
 
 void PowerFSM_setup();
+
+// Callback for TFT screen wake (used when screen is null but deviceScreen exists)
+void setTFTScreenWakeCallback(void (*callback)());
 #endif

@@ -8,6 +8,10 @@
 #include "comms/PacketServer.h"
 #include "graphics/DeviceScreen.h"
 #include "graphics/driver/DisplayDriverConfig.h"
+#include "graphics/driver/DisplayDriver.h"
+#include "input/I2CKeyboardInputDriver.h"
+#include "PowerFSM.h"
+#include "lvgl.h"
 
 #ifdef ARCH_PORTDUINO
 #include "PortduinoGlue.h"
@@ -17,11 +21,9 @@
 DeviceScreen *deviceScreen = nullptr;
 
 #ifdef ARCH_ESP32
-// Get notified when the system is entering light sleep
-CallbackObserver<DeviceScreen, void *> tftSleepObserver =
-    CallbackObserver<DeviceScreen, void *>(deviceScreen, &DeviceScreen::prepareSleep);
-CallbackObserver<DeviceScreen, esp_sleep_wakeup_cause_t> endSleepObserver =
-    CallbackObserver<DeviceScreen, esp_sleep_wakeup_cause_t>(deviceScreen, &DeviceScreen::wakeUp);
+// Sleep/wake observers - created after deviceScreen is valid
+static CallbackObserver<DeviceScreen, void *> *tftSleepObserver = nullptr;
+static CallbackObserver<DeviceScreen, esp_sleep_wakeup_cause_t> *endSleepObserver = nullptr;
 #endif
 
 void tft_task_handler(void *param = nullptr)
@@ -40,6 +42,17 @@ void tftSetup(void)
     deviceScreen = &DeviceScreen::create();
     PacketAPI::create(PacketServer::init());
     deviceScreen->init(new PacketClient);
+
+    // Register callback to wake screen on keyboard input
+    I2CKeyboardInputDriver::setInputEventCallback([]() {
+        powerFSM.trigger(EVENT_INPUT);
+    });
+
+    // Register callback for TFT screen wake on message/event
+    setTFTScreenWakeCallback([]() {
+        DisplayDriver::requestWake();
+        lv_display_trigger_activity(NULL);
+    });
 #else
     if (portduino_config.displayPanel != no_screen) {
         DisplayDriverConfig displayConfig;
@@ -125,8 +138,11 @@ void tftSetup(void)
 
     if (deviceScreen) {
 #ifdef ARCH_ESP32
-        tftSleepObserver.observe(&notifyLightSleep);
-        endSleepObserver.observe(&notifyLightSleepEnd);
+        // Create observers now that deviceScreen is valid
+        tftSleepObserver = new CallbackObserver<DeviceScreen, void *>(deviceScreen, &DeviceScreen::prepareSleep);
+        endSleepObserver = new CallbackObserver<DeviceScreen, esp_sleep_wakeup_cause_t>(deviceScreen, &DeviceScreen::wakeUp);
+        tftSleepObserver->observe(&notifyLightSleep);
+        endSleepObserver->observe(&notifyLightSleepEnd);
         xTaskCreatePinnedToCore(tft_task_handler, "tft", 10240, NULL, 1, NULL, 0);
 #elif defined(ARCH_PORTDUINO)
         std::thread *tft_task = new std::thread([] { tft_task_handler(); });

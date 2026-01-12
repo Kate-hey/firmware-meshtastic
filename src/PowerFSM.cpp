@@ -19,6 +19,23 @@
 #include "sleep.h"
 #include "target_specific.h"
 
+// Callback for TFT screen wake (used when screen is null but deviceScreen exists)
+static void (*tftScreenWakeCallback)() = nullptr;
+
+void setTFTScreenWakeCallback(void (*callback)())
+{
+    tftScreenWakeCallback = callback;
+}
+
+static void triggerScreenWake()
+{
+    if (screen) {
+        screen->setOn(true);
+    } else if (tftScreenWakeCallback) {
+        tftScreenWakeCallback();
+    }
+}
+
 #if HAS_WIFI && !defined(ARCH_PORTDUINO) || defined(MESHTASTIC_EXCLUDE_WIFI)
 #include "mesh/wifi/WiFiAPClient.h"
 #endif
@@ -183,9 +200,7 @@ static void serialEnter()
 {
     LOG_POWERFSM("State: serialEnter");
     setBluetoothEnable(false);
-    if (screen) {
-        screen->setOn(true);
-    }
+    triggerScreenWake();
 }
 
 static void serialExit()
@@ -203,8 +218,7 @@ static void powerEnter()
         LOG_INFO("Loss of power in Powered");
         powerFSM.trigger(EVENT_POWER_DISCONNECTED);
     } else {
-        if (screen)
-            screen->setOn(true);
+        triggerScreenWake();
         setBluetoothEnable(true);
         // within enter() the function getState() returns the state we came from
     }
@@ -229,8 +243,7 @@ static void powerExit()
 static void onEnter()
 {
     LOG_POWERFSM("State: onEnter");
-    if (screen)
-        screen->setOn(true);
+    triggerScreenWake();
     setBluetoothEnable(true);
 }
 
