@@ -1,4 +1,5 @@
 #include "TextMessageModule.h"
+#include "Channels.h"
 #include "MeshService.h"
 #include "MessageStore.h"
 #include "NodeDB.h"
@@ -35,9 +36,17 @@ ProcessMessage TextMessageModule::handleReceived(const meshtastic_MeshPacket &mp
             auto *display = screen ? screen->getDisplayDevice() : nullptr;
             graphics::MessageRenderer::handleNewMessage(display, sm, mp);
         })
-    // Only trigger screen wake if configuration allows it
+    // Only trigger screen wake if configuration allows it and channel is not muted
+    // DMs (channel = 0) always wake, only check mute for actual channel messages
     if (shouldWakeOnReceivedMessage()) {
-        powerFSM.trigger(EVENT_RECEIVED_MSG);
+        bool isChannelMuted = false;
+        if (mp.channel > 0) {
+            meshtastic_Channel ch = channels.getByIndex(mp.channel);
+            isChannelMuted = ch.settings.has_module_settings && ch.settings.module_settings.is_muted;
+        }
+        if (!isChannelMuted) {
+            powerFSM.trigger(EVENT_RECEIVED_MSG);
+        }
     }
 
     // Notify any observers (e.g. external modules that care about packets)
