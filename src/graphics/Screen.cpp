@@ -1471,8 +1471,15 @@ int Screen::handleTextMessage(const meshtastic_MeshPacket *packet)
             hasUnreadMessage = true;                // Enables mail icon in the header
             setFrames(FOCUS_PRESERVE);              // Refresh frame list without switching view (no-op during text_input)
 
-            // Only wake/force display if the configuration allows it
-            if (shouldWakeOnReceivedMessage()) {
+            // Only wake/force display if the configuration allows it and channel is not muted
+            // DMs always wake - detect DM by checking 'to' field (specific node, not broadcast)
+            bool isChannelMuted = false;
+            bool isDM = (packet->to != 0 && packet->to != NODENUM_BROADCAST);
+            if (!isDM) {
+                const meshtastic_Channel ch = channels.getByIndex(packet->channel);
+                isChannelMuted = ch.settings.has_module_settings && ch.settings.module_settings.is_muted;
+            }
+            if (shouldWakeOnReceivedMessage() && !isChannelMuted) {
                 setOn(true);    // Wake up the screen first
                 forceDisplay(); // Forces screen redraw
             }
@@ -1503,7 +1510,8 @@ int Screen::handleTextMessage(const meshtastic_MeshPacket *packet)
             // If on-screen keyboard is active, show a transient popup over keyboard instead of interrupting it
             if (NotificationRenderer::current_notification_type == notificationTypeEnum::text_input) {
                 // Wake and force redraw so popup is visible immediately
-                if (shouldWakeOnReceivedMessage()) {
+                // Allow alerts to bypass mute, but muted channels don't wake otherwise
+                if (shouldWakeOnReceivedMessage() && (!isChannelMuted || isAlert)) {
                     setOn(true);
                     forceDisplay();
                 }

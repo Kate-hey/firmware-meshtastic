@@ -1001,7 +1001,7 @@ void handleNewMessage(OLEDDisplay *display, const StoredMessage &sm, const mesht
         // Shorter banner if already in a conversation (Channel or Direct)
         bool inThread = (getThreadMode() != ThreadMode::ALL);
 
-        if (shouldWakeOnReceivedMessage()) {
+        if (shouldWakeOnReceivedMessage() && !isChannelMuted) {
             screen->setOn(true);
         }
 
